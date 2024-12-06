@@ -17,79 +17,31 @@ namespace AzureMethods.Storages
 {
     public class TableStorage
     {
-        public async Task<BlobBaseClient> GetBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task<BaseEntity> GetEntity(string partitionKey,string rowKey, string connectionString,string tableName, bool authRequired = false)
         {
-
-            // Query entities with a filter
-            await foreach (var entity in tableClient.QueryAsync<MyEntity>(e => e.Age > 25))
-            {
-                Console.WriteLine($"Name: {entity.Name}, Age: {entity.Age}");
-            }
+            var tableClient = new TableClient(connectionString, tableName);
+            var entity = await tableClient.GetEntityAsync<BaseEntity>(partitionKey,rowKey);
+            return entity;
         }
 
-
-        public async Task<BlobClient> CreateBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task CreateEntity(BaseEntity entity,string partitionKey, string rowKey,string connectionString, string tableName, bool authRequired = false)
         {
-
-            // Create a TableServiceClient
-            TableServiceClient serviceClient = new TableServiceClient(connectionString);
-
-            // Create a table (if it doesn't already exist)
-            TableClient tableClient = serviceClient.GetTableClient(tableName);
-            await tableClient.CreateIfNotExistsAsync();
+            var tableClient = new TableClient(connectionString, tableName);
+            await tableClient.AddEntityAsync<BaseEntity>(entity);
         }
 
-        public async Task<BlobClient> CreateBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task ModifyEntity(string partitionKey, string rowKey, string connectionString, string tableName, bool authRequired = false)
         {
-
-            // Define an entity class
-            public class MyEntity : ITableEntity
-            {
-                public string PartitionKey { get; set; }
-                public string RowKey { get; set; }
-                public string Name { get; set; }
-                public int Age { get; set; }
-
-                // Required for Table Storage, but you can leave it unimplemented if you don't use it
-                public DateTimeOffset? Timestamp { get; set; }
-                public ETag ETag { get; set; }
-            }
-
-            string partitionKey = "Partition1";
-            string rowKey = "Row1";
-
-            // Create an instance of the entity
-            MyEntity entity = new MyEntity
-            {
-                PartitionKey = partitionKey,
-                RowKey = rowKey,
-                Name = "John Doe",
-                Age = 30
-            };
-
-            // Insert the entity into the table
-            await tableClient.AddEntityAsync(entity);
-        }
-
-        public async Task ModifyBlob(BinaryData binaryData, string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
-        {
-            MyEntity entityToUpdate = await tableClient.GetEntityAsync<MyEntity>(partitionKey, rowKey);
-
-            // Modify the entity
-            entityToUpdate.Age = 31; // Update the age
-
-            // Upsert (update or insert)
+            var tableClient = new TableClient(connectionString, tableName);
+            BaseEntity entityToUpdate = await tableClient.GetEntityAsync<BaseEntity>(partitionKey, rowKey);
             await tableClient.UpsertEntityAsync(entityToUpdate);
         }
 
-        public async Task DeleteBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task DeleteEntity(string partitionKey, string rowKey, string connectionString, string tableName, bool authRequired = false)
         {
+            var tableClient = new TableClient(connectionString, tableName);
             await tableClient.DeleteEntityAsync(partitionKey, rowKey);
         }
 
-        public async Task DeleteBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
-        {
-            await serviceClient.DeleteTableAsync(tableName);
-        }
     }
 }

@@ -16,68 +16,56 @@ namespace AzureMethods.Storages
 {
     public class FileStorage
     {
-        public async Task<BlobBaseClient> GetBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task<ShareFileItem> GetFile(string connectionString, string fileShareName, string fileName, bool authRequired = false)
         {
+            // Create the ShareClient
+            ShareClient shareClient = new ShareClient(connectionString, fileShareName);
 
             // Get a reference to the file within the share
-            ShareFileClient fileClient = shareClient.GetFileClient(fileName);
+            ShareFileClient fileClient = shareClient.GetRootDirectoryClient().GetFileClient(fileName);
 
-            await foreach (ShareFileItem fileItem in shareClient.GetFilesAndDirectoriesAsync())
+            await foreach (ShareFileItem fileItem in shareClient.GetRootDirectoryClient().GetFilesAndDirectoriesAsync())
             {
-                Console.WriteLine(fileItem.Name);
+                if (fileName == fileItem.Name)
+                    return fileItem;
             }
+
+            return null;
         }
 
-
-        public async Task<BlobClient> CreateBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task CreateFile(string connectionString, string fileShareName, string fileName, FileStream file, bool authRequired = false)
         {
+            // Create the ShareClient
+            ShareClient shareClient = new ShareClient(connectionString, fileShareName);
 
             // Get a reference to the file within the share
-            ShareFileClient fileClient = shareClient.GetFileClient(fileName);
+            ShareFileClient fileClient = shareClient.GetRootDirectoryClient().GetFileClient(fileName);
 
-            // Upload the file (overwrite if it exists)
-            using FileStream fs = File.OpenRead(filePath);
-            await fileClient.UploadAsync(fs, overwrite: true);
+            await fileClient.UploadAsync(file);
         }
 
-        public async Task<BlobClient> CreateBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task ModifyFile(BinaryData binaryData, string connectionString, string fileShareName, string fileName, FileStream file, bool authRequired = false)
         {
+            // Create the ShareClient
+            ShareClient shareClient = new ShareClient(connectionString, fileShareName);
 
-            // Create a ShareClient
-            ShareClient shareClient = new ShareClient(connectionString, shareName);
-
-            // Create the file share if it doesn't exist
-            await shareClient.CreateIfNotExistsAsync();
-
-            Console.WriteLine("File share created (if not already exists).");
-        }
-
-        public async Task ModifyBlob(BinaryData binaryData, string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
-        {
             // Get a reference to the file to delete
-            ShareFileClient fileClient = shareClient.GetFileClient(fileName);
+            ShareFileClient fileClient = shareClient.GetRootDirectoryClient().GetFileClient(fileName);
+            
+            //automatic overwrite
+            await fileClient.UploadAsync(file);
+        }
+
+        public async Task DeleteFile(string connectionString,string fileShareName, string fileName, bool authRequired = false)
+        {
+            // Create the ShareClient
+            ShareClient shareClient = new ShareClient(connectionString, fileShareName);
+
+            // Get a reference to the file to delete
+            ShareFileClient fileClient = shareClient.GetRootDirectoryClient().GetFileClient(fileName);
 
             // Delete the file
             await fileClient.DeleteIfExistsAsync();
-        }
-
-        public async Task DeleteBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
-        {
-            // Create a QueueClient
-            QueueClient queueClient = new QueueClient(connectionString, queueName);
-
-            QueueMessage message = new();
-
-            string updatedMessage = "Updated content!";
-
-            await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
-        }
-
-        public async Task DeleteBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
-        {
-            await shareClient.DeleteIfExistsAsync();
-            Console.WriteLine($"File share '{shareName}' deleted.");
-
         }
     }
 }

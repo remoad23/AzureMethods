@@ -100,7 +100,7 @@ namespace AzureMethods.Storages
             BlobServiceClient blobServiceClient = null;
 
             if (authRequired)
-                blobServiceClient = new BlobServiceClient(connectionString, new DefaultAzureCredential());   
+                blobServiceClient = new BlobServiceClient(connectionString);   
             else
                 blobServiceClient = new BlobServiceClient(connectionString);
 

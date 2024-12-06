@@ -15,63 +15,41 @@ namespace AzureMethods.Storages
 {
     public class QueueStorage
     {
-        public async Task<BlobBaseClient> GetBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task<QueueMessage> GetMessage(string connectionString,string queueName, bool authRequired = false)
         {
-            
-            // Create a QueueServiceClient to interact with the Queue service
-            QueueServiceClient queueServiceClient = new QueueServiceClient(connectionString);
-
-            // List all the queues
-            await foreach (QueueItem queueItem in queueServiceClient.GetQueuesAsync())
-            {
-                Console.WriteLine($"Queue name: {queueItem.Name}");
-            }
-
-            return blobClient;
-        }
-
-
-        public async Task<BlobClient> CreateBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
-        {
-            // Create a QueueClient
             QueueClient queueClient = new QueueClient(connectionString, queueName);
 
-            // Ensure the queue exists
-            await queueClient.CreateIfNotExistsAsync();
+            QueueMessage[] messages = queueClient.ReceiveMessages(maxMessages: 1);
 
-            // Add a message to the queue
-            string message = "Hello, Queue!";
+            var message = messages[0];
+            return message;
+        }
+
+        public async Task CreateMessage(string connectionString, string queueName,string message, bool authRequired = false)
+        {
+            QueueClient queueClient = new QueueClient(connectionString, queueName);
+            await queueClient.CreateIfNotExistsAsync();
             await queueClient.SendMessageAsync(message);
         }
 
-        public async Task ModifyBlob(BinaryData binaryData, string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task ModifyMessage(string connectionString, string queueName,string messageId, string popReceipt,string updatedMessage, bool authRequired = false)
         {
-            // Create a QueueClient
             QueueClient queueClient = new QueueClient(connectionString, queueName);
 
-            QueueMessage message = new();
+            queueClient.ReceiveMessage();
 
-            string updatedMessage = "Updated content!";
-
-            // Update the message
             await queueClient.UpdateMessageAsync(
-                message.MessageId,
-                message.PopReceipt,
+                messageId,
+                popReceipt,
                 updatedMessage,
-                visibilityTimeout: TimeSpan.FromSeconds(0)
+                visibilityTimeout: TimeSpan.FromMinutes(5)
             );
         }
 
-        public async Task DeleteBlob(string connectionString, BlockType blockType, string containerName, string blobName, bool authRequired = false)
+        public async Task DeleteMessage(string connectionString, string queueName,string messageId, string popReceipt, bool authRequired = false)
         {
-            // Create a QueueClient
             QueueClient queueClient = new QueueClient(connectionString, queueName);
-
-            QueueMessage message = new();
-
-            string updatedMessage = "Updated content!";
-
-            await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+            await queueClient.DeleteMessageAsync(messageId,popReceipt);
         }
     }
 }
